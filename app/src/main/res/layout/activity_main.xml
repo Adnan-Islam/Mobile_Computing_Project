@@ -13,8 +13,8 @@
         android:ems="10"
         android:inputType="textPersonName"
         android:text="Name"
-        tools:layout_editor_absoluteX="108dp"
-        tools:layout_editor_absoluteY="321dp" />
+        tools:layout_editor_absoluteX="119dp"
+        tools:layout_editor_absoluteY="447dp" />
 
     <EditText
         android:id="@+id/editText2"
@@ -23,19 +23,18 @@
         android:ems="10"
         android:inputType="textPassword"
         android:text="Password"
-        tools:layout_editor_absoluteX="110dp"
-        tools:layout_editor_absoluteY="393dp" />
+        tools:layout_editor_absoluteX="119dp"
+        tools:layout_editor_absoluteY="525dp" />
 
     <Button
         android:id="@+id/button"
-        android:layout_width="204dp"
-        android:layout_height="59dp"
-        android:layout_color="Blue"
+        android:layout_width="211dp"
+        android:layout_height="56dp"
         android:background="@color/colorPrimaryDark"
-        android:backgroundTint="#B9009688"
+        android:backgroundTint="@color/colorAccent"
         android:text="LOGIN "
         android:textAppearance="@style/TextAppearance.AppCompat.Body2"
-        tools:layout_editor_absoluteX="108dp"
-        tools:layout_editor_absoluteY="152dp" />
+        tools:layout_editor_absoluteX="119dp"
+        tools:layout_editor_absoluteY="351dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
