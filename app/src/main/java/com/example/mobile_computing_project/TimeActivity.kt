@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.mobile_computing_project
 
 import android.app.AlarmManager

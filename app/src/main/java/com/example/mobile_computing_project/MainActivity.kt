@@ -44,6 +44,10 @@ class MainActivity : AppCompatActivity() {
 
         }
 
+        button_location.setOnClickListener {
+            startActivity(Intent(applicationContext, MapNavigateActivity::class.java))
+
+        }
 
 
 
