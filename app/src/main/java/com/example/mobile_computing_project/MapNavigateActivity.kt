@@ -1,24 +1,30 @@
 package com.example.mobile_computing_project
 
 import android.Manifest
+import android.app.PendingIntent
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Geocoder
 import android.location.Location
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.SupportMapFragment
 import kotlinx.android.synthetic.main.activity_map_navigate.*
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationAvailability
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_main.*
+import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.toast
 import java.lang.Exception
 import java.util.*
@@ -30,9 +36,17 @@ class MapNavigateActivity : AppCompatActivity(), OnMapReadyCallback {
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     lateinit var selectedLocation:LatLng
 
+lateinit var geofencingClient: GeofencingClient
+    val GEOFENCE_ID="REMINDER_GEOFENCE_ID"
+    val GEOFENCE_RADIUS= 500
+    val GEOFENCE_EXPIRATION= 120*24*60*60*1000
+    val GEOFENCE_DWELL_DELAY= 2*60*1000
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map_navigate)
+
+        geofencingClient=LocationServices.getGeofencingClient(this)
 
         (map_fragment as SupportMapFragment).getMapAsync(this)
         button_create.setOnClickListener {
@@ -53,9 +67,58 @@ class MapNavigateActivity : AppCompatActivity(), OnMapReadyCallback {
                 location = String.format("%.3f,%.3f",selectedLocation.latitude,selectedLocation.latitude),
                 message = reminderText
             )
+
+            doAsync {
+                val db =
+                    Room.databaseBuilder(applicationContext, AppDatabase::class.java, "reminders").build()
+
+                val uid=db.reminderDao().insert(reminder).toInt()
+                 reminder.uid=uid
+                 db.close()
+                CreateGeofence(selectedLocation, reminder, geofencingClient)
+            }
+
+            finish()
         }
     }
+    private fun CreateGeofence(selectedLocation:LatLng, reminder: Reminder, geofencingClient: GeofencingClient)
+    {
+        val geofence = Geofence.Builder().setRequestId(GEOFENCE_ID).setCircularRegion(selectedLocation.latitude,
+            selectedLocation.longitude, GEOFENCE_RADIUS.toFloat()).setExpirationDuration(GEOFENCE_EXPIRATION.toLong())
+            .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
+            .setLoiteringDelay(GEOFENCE_DWELL_DELAY).build()
 
+        val geofenceRequest =
+            GeofencingRequest.Builder().setInitialTrigger(Geofence.GEOFENCE_TRANSITION_ENTER)
+                .addGeofence(geofence).build()
+
+        val intent =Intent(this, GeofenceReciever::class.java).putExtra("uid", reminder.uid)
+            .putExtra("message", reminder.message).putExtra("location", reminder.location)
+
+        val pendingIntent =PendingIntent.getBroadcast(applicationContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+        geofencingClient.addGeofences()
+    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        if(requestCode==123) {
+            if(grantResults.isNotEmpty() && (grantResults[0] == PackageManager.PERMISSION_DENIED||
+                        grantResults[1] == PackageManager.PERMISSION_DENIED))
+            {
+                toast("The reminder needs all the permissions to function")
+            }
+
+            if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.Q) {
+                if (grantResults.isEmpty()&& (grantResults[2] == PackageManager.PERMISSION_DENIED)) {
+                    toast("The reminder needs all the permissions to function")
+                }
+            }
+        }
+
+    }
 
     override fun onMapReady(map: GoogleMap?) {
         gMap=map ?:return
@@ -72,7 +135,15 @@ class MapNavigateActivity : AppCompatActivity(), OnMapReadyCallback {
             }
           }
         } else{
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION,android.Manifest.permission.ACCESS_COARSE_LOCATION), 123)
+            var permission= mutableListOf<String>()
+            permission.add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            permission.add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+
+            if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.Q){
+                permission.add(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+
+            }
+            ActivityCompat.requestPermissions(this, permission.toTypedArray(), 123)
         }
 
 
@@ -94,6 +165,11 @@ class MapNavigateActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 val marker=addMarker(MarkerOptions().position(location).snippet(title).title(city))
                 marker.showInfoWindow()
+
+                addCircle(CircleOptions().center(location).strokeColor(
+                    Color.argb(
+                        50, 70, 70, 70))
+                    .fillColor(Color.argb(100, 150, 150, 150)))
 
                 selectedLocation=location
 
