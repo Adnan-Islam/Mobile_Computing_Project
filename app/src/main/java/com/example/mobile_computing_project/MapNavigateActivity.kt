@@ -97,7 +97,7 @@ lateinit var geofencingClient: GeofencingClient
 
         val pendingIntent =PendingIntent.getBroadcast(applicationContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
 
-        geofencingClient.addGeofences()
+        geofencingClient.addGeofences(geofenceRequest,pendingIntent)
     }
     override fun onRequestPermissionsResult(
         requestCode: Int,
